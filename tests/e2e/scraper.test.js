@@ -1,14 +1,19 @@
 import { jest } from '@jest/globals';
 import fetch from 'node-fetch';
 
+import companyConfig from '../../scraper/config/company.js';
+const TEST_CIF = companyConfig.id;
+const TEST_BRAND = companyConfig.brand;
+const COMPANY_NAME = companyConfig.company;
+
 const API_BASE = 'https://api.peviitor.ro/v1';
-const EPAM_CIF = '33159615';
+const ASHBY_API_URL = 'https://api.ashbyhq.com/posting-api/job-board/taktile';
 
 let HAS_API = false;
 
 async function checkApiAvailability() {
   try {
-    const res = await fetch(`${API_BASE}/scraper/jobs/?cif=${EPAM_CIF}&rows=1`, {
+    const res = await fetch(`${API_BASE}/scraper/jobs/?cif=${TEST_CIF}&rows=1`, {
       signal: AbortSignal.timeout(5000)
     });
     return res.ok || res.status === 400;
@@ -45,53 +50,48 @@ function itIfAnaf(name, fn, timeout) {
   return it.skip(`${name} (skipped: ANAF API unavailable)`, fn, timeout);
 }
 
-import companyConfig from '../../scraper/config/company.js';
-const TEST_CIF = companyConfig.id;
-const TEST_BRAND = companyConfig.brand;
-const COMPANY_NAME = companyConfig.company;
-const EPAM_API_URL = 'https://careers.epam.com/api/jobs/v2/search/careers-i18n?from=0&lang=en&size=5&sortBy=relevance%3Brelocation%3Dasc&websiteLocale=en-us&facets=country%3D8150000000000001155';
-
 beforeAll(async () => {
   [HAS_API, HAS_ANAF] = await Promise.all([checkApiAvailability(), checkAnafAvailability()]);
-});
+}, 60000);
 
 describe('E2E: Full Scraping Pipeline', () => {
 
-  describe('EPAM Careers API — Real Data Fetch', () => {
+  describe('Taktile Ashby API — Real Data Fetch', () => {
     let apiData;
 
     beforeAll(async () => {
-      const res = await fetch(EPAM_API_URL, {
+      const res = await fetch(ASHBY_API_URL, {
         headers: {
           'User-Agent': 'job_seeker_ro_spider',
           'Accept': 'application/json'
         }
       });
       apiData = await res.json();
-    }, 15000);
+    }, 60000);
 
-    it('should respond with valid job data from EPAM API', () => {
-      expect(apiData.data).toHaveProperty('jobs');
-      expect(Array.isArray(apiData.data.jobs)).toBe(true);
-      expect(apiData.data.jobs.length).toBeGreaterThan(0);
-      expect(apiData.data).toHaveProperty('total');
-      expect(typeof apiData.data.total).toBe('number');
+    it('should respond with valid job data from the Ashby API', () => {
+      expect(apiData).toHaveProperty('jobs');
+      expect(Array.isArray(apiData.jobs)).toBe(true);
+      expect(apiData.jobs.length).toBeGreaterThan(0);
     }, 10000);
 
-    it('should have Romania jobs with expected fields', () => {
-      const job = apiData.data.jobs[0];
-      expect(job).toHaveProperty('uid');
-      expect(job).toHaveProperty('name');
-      expect(typeof job.name).toBe('string');
-      expect(job).toHaveProperty('city');
+    it('should have jobs with expected fields', () => {
+      const job = apiData.jobs[0];
+      expect(job).toHaveProperty('id');
+      expect(job).toHaveProperty('title');
+      expect(typeof job.title).toBe('string');
+      expect(job).toHaveProperty('jobUrl');
     });
 
-    it('should have Romanian country on at least one job', () => {
-      const allCountries = apiData.data.jobs.flatMap(j =>
-        (j.country || []).map(c => c.name?.toLowerCase())
-      );
-      expect(allCountries.length).toBeGreaterThan(0);
-      expect(allCountries.some(c => c === 'romania')).toBe(true);
+    it('should have at least one job with Iasi (Romania) location', () => {
+      const hasIasi = apiData.jobs.some(job => {
+        const locations = [job, ...(job.secondaryLocations || [])];
+        return locations.some(loc =>
+          String(loc.location || '').toLowerCase().includes('ias') ||
+          String(loc.address?.postalAddress?.addressCountry || '').toLowerCase() === 'romania'
+        );
+      });
+      expect(hasIasi).toBe(true);
     });
   });
 
@@ -101,32 +101,30 @@ describe('E2E: Full Scraping Pipeline', () => {
 
     beforeAll(async () => {
       index = await import('../../scraper/index.js');
-      const res = await fetch(EPAM_API_URL, {
+      const res = await fetch(ASHBY_API_URL, {
         headers: {
           'User-Agent': 'job_seeker_ro_spider',
           'Accept': 'application/json'
         }
       });
       apiData = await res.json();
-    }, 15000);
+    }, 60000);
 
-    it('should parse real EPAM API response into standardized format', () => {
+    it('should parse real Ashby API response into standardized format', () => {
       const result = index.parseApiJobs(apiData);
 
       expect(result).toHaveProperty('jobs');
       expect(result).toHaveProperty('total');
       expect(result.jobs.length).toBeGreaterThan(0);
-      expect(result.jobs.length).toBeLessThanOrEqual(5);
 
       const parsed = result.jobs[0];
       expect(parsed).toHaveProperty('url');
-      expect(parsed.url).toMatch(/^https:\/\/careers\.epam\.com\//);
+      expect(parsed.url).toMatch(/^https:\/\/jobs\.ashbyhq\.com\/taktile\//);
       expect(parsed).toHaveProperty('title');
       expect(parsed).toHaveProperty('workmode');
       expect(['remote', 'on-site', 'hybrid']).toContain(parsed.workmode);
       expect(parsed).toHaveProperty('location');
       expect(Array.isArray(parsed.location)).toBe(true);
-      expect(parsed).toHaveProperty('tags');
     });
 
     it('should map parsed jobs to job model', () => {
@@ -139,7 +137,7 @@ describe('E2E: Full Scraping Pipeline', () => {
       expect(model).toHaveProperty('cif', TEST_CIF);
       expect(model).toHaveProperty('status', 'scraped');
       expect(model).toHaveProperty('date');
-      expect(model.url).toMatch(/^https:\/\/careers\.epam\.com\//);
+      expect(model.url).toMatch(/^https:\/\/jobs\.ashbyhq\.com\/taktile\//);
     });
 
     it('should transform jobs and filter to Romanian locations', () => {
@@ -147,7 +145,7 @@ describe('E2E: Full Scraping Pipeline', () => {
       const jobs = parsed.jobs.map(j => index.mapToJobModel(j, TEST_CIF));
 
       const payload = {
-        source: 'epam.com',
+        source: 'jobs.ashbyhq.com/taktile',
         company: COMPANY_NAME,
         cif: TEST_CIF,
         jobs
@@ -186,17 +184,17 @@ describe('E2E: Full Scraping Pipeline', () => {
     beforeAll(async () => {
       anaf = await import('../../scraper/anaf.js');
       company = await import('../../scraper/company.js');
-    });
+    }, 60000);
 
-    itIfAnaf('should find EPAM in ANAF and validate active status', async () => {
+    itIfAnaf('should find TAKTILE in ANAF and validate active status', async () => {
       const results = await anaf.searchCompany(TEST_BRAND);
 
-      const epam = results.find(c =>
+      const taktile = results.find(c =>
         c.cui.toString() === TEST_CIF &&
         c.statusLabel === 'Funcțiune'
       );
-      expect(epam).toBeDefined();
-      expect(epam.cui.toString()).toBe(TEST_CIF);
+      expect(taktile).toBeDefined();
+      expect(taktile.cui.toString()).toBe(TEST_CIF);
 
       const anafData = await anaf.getCompanyFromANAF(TEST_CIF);
       expect(anafData).toBeDefined();
@@ -211,7 +209,7 @@ describe('E2E: Full Scraping Pipeline', () => {
       expect(result.cif).toBe(TEST_CIF);
 
       if (result.existingJobsCount === 0) {
-        console.log('⚠️ No EPAM jobs in API — skipping job count assertion');
+        console.log('⚠️ No TAKTILE jobs in API — skipping job count assertion');
         return;
       }
       expect(result.existingJobsCount).toBeGreaterThan(0);
@@ -223,7 +221,7 @@ describe('E2E: Full Scraping Pipeline', () => {
 
     beforeAll(async () => {
       anaf = await import('../../scraper/anaf.js');
-    });
+    }, 60000);
 
     itIfAnaf('should detect inactive/radiated companies via ANAF', async () => {
       const results = await anaf.searchCompany(TEST_BRAND);
@@ -249,13 +247,13 @@ describe('E2E: Full Scraping Pipeline', () => {
 
     beforeAll(async () => {
       api = await import('../../scraper/api.js');
-    });
+    }, 60000);
 
-    itIfApi('should have EPAM jobs in API with correct company name', async () => {
+    itIfApi('should have TAKTILE jobs in API with correct company name', async () => {
       const result = await api.querySOLR(TEST_CIF);
 
       if (result.numFound === 0) {
-        console.log('⚠️ No EPAM jobs in API — skipping API data verification');
+        console.log('⚠️ No TAKTILE jobs in API — skipping API data verification');
         return;
       }
 
@@ -265,7 +263,7 @@ describe('E2E: Full Scraping Pipeline', () => {
       }
     }, 15000);
 
-    itIfApi('should have EPAM company core entry with required fields', async () => {
+    itIfApi('should have TAKTILE company core entry with required fields', async () => {
       const companyDoc = await api.getCompanyByCif(TEST_CIF);
 
       expect(companyDoc).toBeDefined();

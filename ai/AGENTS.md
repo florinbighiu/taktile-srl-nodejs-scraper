@@ -1,14 +1,14 @@
 # AGENTS.md — Rules for AI agents
 
 ## Project
-EPAM scraper for peviitor.ro (Node.js, ESM, Jest)
+TAKTILE scraper for peviitor.ro (Node.js, ESM, Jest) — derived from the EPAM scraper template.
 
-## 📐 This Repo Is a Template
-This repo is the **reference implementation** for all Node.js scrapers in the peviitor.ro ecosystem. Other scrapers are derived from it.
+## 📐 Derived Scraper
+This repo is a **derived scraper** for **TAKTILE S.R.L. (CIF: 51981214)**. It was created from the template `sebiboga/epam-systems-international-srl-nodejs-scraper`.
 
 When making changes:
 - **All company-specific identity lives in `scraper/config/company.json`** (id, company, brand, URLs, API params). Read from `scraper/config/company.js` in Node code, or via `jq` in workflows. Never hardcode in source files.
-- **Only the API parsing logic in `scraper/index.js`** (`fetchJobsPage`, `parseApiJobs`) is EPAM-specific. The output shape (`mapToJobModel`, `transformJobsForSOLR`) must stay uniform across derived scrapers.
+- **Only the API parsing logic in `scraper/index.js`** (`fetchJobs`, `parseApiJobs`) is Taktile-specific (Ashby API). The output shape (`mapToJobModel`, `transformJobsForSOLR`) must stay uniform across all scrapers.
 
 ## Critical Rules
 
@@ -18,7 +18,7 @@ When polling a workflow run with `until [ "$(gh run view ID --json status -q .st
 
 **Always specify the repo explicitly:**
 ```bash
-gh run view <RUN_ID> --repo sebiboga/epam-systems-international-srl-nodejs-scraper --json status -q .status
+gh run view <RUN_ID> --repo florinbighiu/taktile-srl-nodejs-scraper --json status -q .status
 ```
 
 Before starting any `gh run watch` or polling loop in the background, sanity-check:
@@ -66,6 +66,6 @@ npm run test:consistency   # needs GITHUB_REPOSITORY + GITHUB_TOKEN
 See [MAINTENANCE.md](MAINTENANCE.md) for the full maintenance workflow.
 
 **On every session:**
-1. Check open GitHub issues: `gh issue list --repo sebiboga/epam-systems-international-srl-nodejs-scraper --state open`
+1. Check open GitHub issues: `gh issue list --repo florinbighiu/taktile-srl-nodejs-scraper --state open`
 2. Prioritize: `critical` → `bug` → `enhancement` → `documentation`
 3. Fix all issues, commit with `#issue` reference, close the issue

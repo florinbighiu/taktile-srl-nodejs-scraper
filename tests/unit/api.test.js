@@ -37,12 +37,12 @@ describe('scraper/api.js', () => {
       mockFetch.mockResolvedValue(makeJsonResponse({
         total: 2,
         data: [
-          { id: 'job1', url: 'https://test.com/1', cif: '39176747' },
-          { id: 'job2', url: 'https://test.com/2', cif: '39176747' }
+          { id: 'job1', url: 'https://test.com/1', cif: '51981214' },
+          { id: 'job2', url: 'https://test.com/2', cif: '51981214' }
         ]
       }));
 
-      const result = await solr.querySOLR('39176747');
+      const result = await solr.querySOLR('51981214');
 
       expect(result).toHaveProperty('numFound', 2);
       expect(result).toHaveProperty('docs');
@@ -62,7 +62,7 @@ describe('scraper/api.js', () => {
     it('should throw on HTTP error', async () => {
       mockFetch.mockResolvedValue(makeErrorResponse(500, 'Internal Server Error'));
 
-      await expect(solr.querySOLR('39176747')).rejects.toThrow('API jobs query error: 500');
+      await expect(solr.querySOLR('51981214')).rejects.toThrow('API jobs query error: 500');
     });
   });
 
@@ -106,13 +106,13 @@ describe('scraper/api.js', () => {
     it('should delete all jobs for a CIF', async () => {
       mockFetch.mockResolvedValue(makeJsonResponse({ count: 3 }));
 
-      await expect(solr.deleteJobsByCIF('39176747')).resolves.not.toThrow();
+      await expect(solr.deleteJobsByCIF('51981214')).resolves.not.toThrow();
     });
 
     it('should throw on HTTP error', async () => {
       mockFetch.mockResolvedValue(makeErrorResponse(500, 'Error'));
 
-      await expect(solr.deleteJobsByCIF('39176747')).rejects.toThrow('API jobs delete error: 500');
+      await expect(solr.deleteJobsByCIF('51981214')).rejects.toThrow('API jobs delete error: 500');
     });
   });
 
@@ -121,12 +121,12 @@ describe('scraper/api.js', () => {
       mockFetch.mockResolvedValue(makeJsonResponse({
         total: 2,
         data: [
-          { url: 'https://test.com/job1', title: 'Job 1', cif: '39176747' },
-          { url: 'https://test.com/job2', title: 'Job 2', cif: '39176747' }
+          { url: 'https://test.com/job1', title: 'Job 1', cif: '51981214' },
+          { url: 'https://test.com/job2', title: 'Job 2', cif: '51981214' }
         ]
       }));
 
-      const result = await solr.querySOLR('39176747');
+      const result = await solr.querySOLR('51981214');
       const urls = result.docs.map(j => j.url);
       const uniqueUrls = new Set(urls);
 
@@ -137,12 +137,12 @@ describe('scraper/api.js', () => {
       mockFetch.mockResolvedValue(makeJsonResponse({
         total: 2,
         data: [
-          { url: 'https://test.com/1', title: 'Job 1', cif: '39176747' },
+          { url: 'https://test.com/1', title: 'Job 1', cif: '51981214' },
           { url: 'https://test.com/2', title: 'Job 2', cif: '12345678' }
         ]
       }));
 
-      const result = await solr.querySOLR('39176747');
+      const result = await solr.querySOLR('51981214');
 
       for (const job of result.docs) {
         expect(job.cif).toMatch(/^\d{6,9}$/);
@@ -170,13 +170,13 @@ describe('scraper/api.js', () => {
       mockFetch.mockResolvedValue(makeJsonResponse({
         total: 3,
         data: [
-          { url: 'https://test.com/1', title: 'Job 1', cif: '39176747', status: 'scraped' },
-          { url: 'https://test.com/2', title: 'Job 2', cif: '39176747', status: 'verified' },
-          { url: 'https://test.com/3', title: 'Job 3', cif: '39176747', status: 'published' }
+          { url: 'https://test.com/1', title: 'Job 1', cif: '51981214', status: 'scraped' },
+          { url: 'https://test.com/2', title: 'Job 2', cif: '51981214', status: 'verified' },
+          { url: 'https://test.com/3', title: 'Job 3', cif: '51981214', status: 'published' }
         ]
       }));
 
-      const result = await solr.querySOLR('39176747');
+      const result = await solr.querySOLR('51981214');
 
       for (const job of result.docs) {
         expect(validStatuses).toContain(job.status);

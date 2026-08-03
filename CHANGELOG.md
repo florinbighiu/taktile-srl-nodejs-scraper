@@ -5,10 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.2] - 2026-07-31
+## [1.5.2] - 2026-08-03
+
+### Derived scraper: TAKTILE S.R.L. (CIF: 51981214)
+
+This repo is a **derived scraper** created from the template
+[sebiboga/epam-systems-international-srl-nodejs-scraper](https://github.com/sebiboga/epam-systems-international-srl-nodejs-scraper) (v1.5.2).
+
+### Added
+- TAKTILE company identity: `scraper/config/company.json`, `docs/company.json` (CIF `51981214`, brand `TAKTILE`, Iași, websites `taktile.com` + `jobs.ashbyhq.com/taktile`)
+- Ashby job board integration: `scraper/config/scraper.json` points at `https://api.ashbyhq.com/posting-api/job-board/taktile`; `scraper/index.js` now fetches the single Ashby JSON payload, filters jobs to Romania/Iasi (primary + `secondaryLocations`), and normalizes `workmode` from `workplaceType`
+- Tests updated for the Ashby format (`tests/unit/index.test.js`) and TAKTILE fixtures across unit/integration/e2e/consistency suites
+- Renamed `tests/validate-taktile-jobs.js` → `tests/validate-taktile-jobs.js` (workflows `automation-testing.yml`, `job-deep-validate.yml` updated)
 
 ### Removed
-- Stale derived-scraper reference in CHANGELOG — repo no longer links the first derivative (#47)
+- EPAM-specific paginated careers API code and fixtures
+- `ai/AI-DERIVATION-GUIDE.md` (template-internal playbook, not applicable to derived scrapers)
 
 ## [1.5.1] - 2026-06-21
 
@@ -16,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scraper/company-data.js` → `scraper/anaf.js`, `scraper/company-data-cli.js` → `scraper/demoanaf.js` (module rename; imports updated in `company.js`, tests, docs)
 - `scraper/markdown-generator.js`: added `escapeMarkdown()` — escapes `# * _ [ ] \`` in company and job fields so `docs/jobs.md` stays valid Markdown
 - `scraper/job-validator.js`: added `validateByBrowser()` (Playwright headless Chromium, catches JS-rendered 404s) and new keyword "the page you are looking for doesn't exist"
-- `tests/validate-epam-jobs.js`: multi-mode validator (`--head`, `--content`, `--browser`, `--timeout`)
+- `tests/validate-taktile-jobs.js`: multi-mode validator (`--head`, `--content`, `--browser`, `--timeout`)
 - `scraper/config/company.json` + `docs/company.json`: added `scraperFile` (GitHub Actions workflow URL, no raw)
 - Workflows: `.github/workflows/job-seeker-ro-spider.yml`, `automation-testing.yml`, `job-recovery-from-disaster.yml` now upsert `scraperFile`; recovery workflow parses `.data[0]` and drops emoji output
 - New workflows: `.github/workflows/job-deep-validate.yml` (manual Playwright deep validation), `.github/workflows/automation-template-sync-check.yml` (weekly check that derived scrapers match this template)
@@ -67,8 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests for the new module (9 tests)
 
 ### Changed
-- `validate-jobs.js` and `tests/validate-epam-jobs.js` are now thin CLIs that delegate to `src/job-validator.js` and `solr.js` (closes #35)
-- `tests/validate-epam-jobs.js` no longer reimplements SOLR auth, query, or delete — uses `querySOLR` + `deleteJobByUrl` from `solr.js`
+- `validate-jobs.js` and `tests/validate-taktile-jobs.js` are now thin CLIs that delegate to `src/job-validator.js` and `solr.js` (closes #35)
+- `tests/validate-taktile-jobs.js` no longer reimplements SOLR auth, query, or delete — uses `querySOLR` + `deleteJobByUrl` from `solr.js`
 
 ## [1.3.0] - 2026-06-17
 
@@ -79,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/company.json` regenerated on each scrape so the live page reads company identity dynamically
 
 ### Changed
-- `index.js`, `company.js`, `demoanaf.js`, `tests/validate-epam-jobs.js`, `docs/index.html`, `automation-testing.yml` all now read from `config/company.json` instead of hardcoded constants
+- `index.js`, `company.js`, `demoanaf.js`, `tests/validate-taktile-jobs.js`, `docs/index.html`, `automation-testing.yml` all now read from `config/company.json` instead of hardcoded constants
 - CONTRIBUTING.md derivation checklist simplified — editing `config/company.json` is now the primary step
 
 ### Fixed

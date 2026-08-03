@@ -1,5 +1,5 @@
 {
-  "name": "scraper-epam-ro",
+  "name": "scraper-taktile-ro",
   "version": "1.5.2",
   "type": "module",
   "main": "scraper/index.js",

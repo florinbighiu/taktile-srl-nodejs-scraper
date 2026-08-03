@@ -10,7 +10,7 @@
 | `scraper/demoanaf.js` | CLI entry point for anaf.js (thin wrapper) |
 | `scraper/api.js` | Peviitor API operations module - exports querySOLR, deleteJobByUrl, upsertJobs + standalone verify/extract/company commands |
 | `scraper/validate-jobs.js` | **Generic deep validator (manual use).** Full GET requests, parses page body for "no longer available" keywords. Works with any CIF, single URL, or file. Slower but catches soft-404s. Not used by CI. |
-| `scraper/job-validator.js` | Shared validation primitives - exports validateByHead(url), validateByContent(url, opts), validateByBrowser(url, opts), DEFAULT_EXPIRED_KEYWORDS. Used by `validate-jobs.js`, `tests/validate-epam-jobs.js`, and the deep-validate workflow. |
+| `scraper/job-validator.js` | Shared validation primitives - exports validateByHead(url), validateByContent(url, opts), validateByBrowser(url, opts), DEFAULT_EXPIRED_KEYWORDS. Used by `validate-jobs.js`, `tests/validate-taktile-jobs.js`, and the deep-validate workflow. |
 | `scraper/markdown-generator.js` | Generates docs/jobs.md - exports generateJobsMarkdown(companyData, jobs) |
 
 ## Config — scraper/config/
@@ -26,7 +26,7 @@
 |------|-------------|
 | `tests/package.json` | Jest config for test suite - experimental VM modules, test scripts (unit/integration/e2e/consistency) |
 | `tests/company.json` | Mock company data used in unit tests |
-| `tests/validate-epam-jobs.js` | **EPAM-specific validator (used by CI).** Modes: `--head` (default), `--content`, `--browser` (Playwright). Called nightly by `automation-testing.yml` and manually via `job-deep-validate.yml`. Supports `--dry-run` and `--delete`. |
+| `tests/validate-taktile-jobs.js` | **Company-specific validator (used by CI).** Modes: `--head` (default), `--content`, `--browser` (Playwright). Called nightly by `automation-testing.yml` and manually via `job-deep-validate.yml`. Supports `--dry-run` and `--delete`. |
 | `tests/unit/index.test.js` | Unit tests for index.js - parseApiJobs, mapToJobModel, transformJobsForSOLR |
 | `tests/unit/company.test.js` | Unit tests for company.js - getCompanyBrand, validateAndGetCompany, fallback caching |
 | `tests/unit/api.test.js` | Unit tests for api.js - query, upsert, delete, HTTP error handling |
@@ -34,7 +34,7 @@
 | `tests/unit/job-validator.test.js` | Unit tests for job-validator.js - validateByHead, validateByContent, validateByBrowser |
 | `tests/unit/markdown-generator.test.js` | Unit tests for markdown-generator.js |
 | `tests/integration/workflow.test.js` | Integration tests - ANAF live API, Peviitor API |
-| `tests/e2e/scraper.test.js` | E2E tests - full pipeline with real EPAM career API, ANAF, and Peviitor API |
+| `tests/e2e/scraper.test.js` | E2E tests - full pipeline with real Taktile Ashby API, ANAF, and Peviitor API |
 | `tests/consistency/public.test.js` | Verifies repository is public on GitHub |
 | `tests/consistency/repo.test.js` | Verifies default branch, GitHub Pages, workflow files |
 | `tests/consistency/topics.test.js` | Verifies repository has required topics: job-seeker-ro-spider, peviitor-ro |
@@ -49,12 +49,10 @@
 | `company-model.md` | Company schema definition (Peviitor Core) - fields, types, validation rules |
 | `files.md` | This file - documents role of each project file |
 | `AGENTS.md` | Rules for AI agents working on this project |
-| `AI-DERIVATION-GUIDE.md` | **Comprehensive playbook for AI agents deriving a new scraper from this template.** Step-by-step + every known pitfall. |
 | `BRANCH.md` | Branch strategy and naming conventions |
-
 | `ISSUES.md` | Issue tracking conventions |
 | `PUBLIC.md` | Notes on public visibility and data policies |
-| `ROBOTS.md` | robots.txt analysis and scraping policy for EPAM Careers |
+| `ROBOTS.md` | robots.txt analysis and scraping policy for the Taktile Ashby board |
 | `SECURITY.md` | Security policy and vulnerability reporting |
 | `TOPICS.md` | Repository topics documentation |
 | `UPDATE-REPO-ABOUT.md` | Instructions for updating repo description/about |
@@ -91,4 +89,4 @@
 
 - All `.md` schema files (job-model.md, company-model.md) are dynamic — check peviitor_core README.md for updates
 - `tmp/` directory holds runtime artifacts (company.json, jobs.json) — not committed
-- Full workflow: validate company (ANAF+CUIScan+CUIFirma+Peviitor) → scrape EPAM → transform → upsert → generate docs/jobs.md
+- Full workflow: validate company (ANAF+CUIScan+CUIFirma+Peviitor) → scrape Taktile (Ashby) → transform → upsert → generate docs/jobs.md

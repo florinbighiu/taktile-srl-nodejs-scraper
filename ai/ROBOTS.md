@@ -1,27 +1,28 @@
-# Robots.txt Analysis — EPAM Careers
+# Robots.txt Analysis — Taktile Ashby Board
 
-Sursa: https://careers.epam.com/robots.txt
+Sursa: https://jobs.ashbyhq.com/robots.txt (Ashby) — Taktile folosește platforma Ashby pentru board-ul de job-uri.
 
-## Reguli
+## Reguli (Ashby)
 
 ```
 User-agent: *
-Disallow: /
+Disallow: /apply/*
+Disallow: /c/*/apply/*
 ```
 
 ## Interpretare
 
 | Cale | Accesibil? | Ce conține |
 |---|---|---|
-| `/` | ❌ Disallowed | Tot site-ul |
-| API (`/api/jobs/v2/...`) | ❌ Disallowed | API-ul JSON de la care scraper-ul extrage datele |
+| `/` | ✅ Accesibil | Pagina board-ului de job-uri |
+| `/taktile` | ✅ Accesibil | Board-ul public Taktile |
+| API (`api.ashbyhq.com/posting-api/...`) | ✅ Accesibil | API-ul public JSON de unde scraper-ul extrage datele |
+| `/apply/*` | ❌ Disallowed | Formularele de aplicare (nu le scraper-uim) |
 
 ## Recomandare
 
-robots.txt NU este legal binding, dar reprezintă intenția proprietarului site-ului.
+- API-ul `api.ashbyhq.com/posting-api/job-board/taktile` este **public**, răspunde fără autentificare și fără User-Agent special — este API-ul oficial de posting al Ashby, conceput tocmai pentru syndication/agregatoare de job-uri (similar peviitor.ro).
+- Paginile individuale de job (`jobs.ashbyhq.com/taktile/{id}`) sunt accesibile și sunt folosite doar ca URL-uri de destinație în modelul de job + pentru HEAD checks în teste.
+- Scraperul face o singură cerere pentru tot board-ul — comportament foarte rezonabil, nu agresiv.
 
-- API-ul `/api/jobs/v2/search/...` e **disallowed** de robots.txt. În practică, serverul răspunde cu 200 OK cu `User-Agent` normal și fără autentificare.
-- Paginile individuale de job sunt și ele disallowed. Noi nu le scraper-uim direct — doar le verificăm accesibilitatea (HEAD request) în teste.
-- Scraperul curent face o singură cerere per pagină (10 job-uri) cu delay de 1s între pagini — comportament rezonabil, nu agresiv.
-
-**Concluzie**: Risc minim. API-ul e public, răspunde fără autentificare, iar scraperul e politicos (rate limiting, User-Agent standard, o singură cerere simultană).
+**Concluzie**: Risc minim. API-ul e public și destinat agregării, iar scraperul e politicos (User-Agent standard `job_seeker_ro_spider`, o singură cerere simultană).

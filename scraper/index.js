@@ -8,11 +8,9 @@ import companyConfig from "./config/company.js";
 import scraperConfig from "./config/scraper.js";
 
 const COMPANY_CIF = companyConfig.id;
-const JOB_BASE = scraperConfig.apiBase;
-const ROMANIA_COUNTRY_ID = scraperConfig.apiCountryId;
+const JOB_API = scraperConfig.apiBase;
 
 const TIMEOUT = 10000;
-const PAGE_SIZE = 10;
 
 let COMPANY_NAME = null;
 
@@ -59,11 +57,11 @@ async function searchANOFM(cif) {
   return jobs;
 }
 
-async function fetchJobsPage(pageNum) {
-  const from = (pageNum - 1) * PAGE_SIZE;
-  const url = `${JOB_BASE}/api/jobs/v2/search/careers-i18n?from=${from}&lang=en&size=${PAGE_SIZE}&sortBy=relevance%3Brelocation%3Dasc&websiteLocale=en-us&facets=country%3D${ROMANIA_COUNTRY_ID}`;
+async function fetchJobs() {
+  const url = JOB_API;
 
   const res = await fetch(url, {
+    timeout: TIMEOUT,
     headers: {
       "User-Agent": "job_seeker_ro_spider",
       "Accept": "application/json"
@@ -71,105 +69,66 @@ async function fetchJobsPage(pageNum) {
   });
 
   if (!res.ok) {
-    throw new Error(`API error ${res.status} for page=${pageNum}`);
+    throw new Error(`Ashby API error ${res.status}`);
   }
 
   return await res.json();
 }
 
+function jobInRomania(job) {
+  if (!job) return false;
+  const isRomania = (entry) => {
+    if (!entry) return false;
+    const country = String(entry.address?.postalAddress?.addressCountry || "").toLowerCase();
+    const location = String(entry.location || "").toLowerCase();
+    return country === "romania" || location.includes("ias");
+  };
+  if (isRomania(job)) return true;
+  return (job.secondaryLocations || []).some(isRomania);
+}
+
+function normalizeWorkmode(wm) {
+  if (!wm) return "hybrid";
+  const lower = String(wm).toLowerCase();
+  if (lower.includes("remote")) return "remote";
+  if (lower.includes("onsite") || lower.includes("on-site")) return "on-site";
+  return "hybrid";
+}
+
 function parseApiJobs(apiData) {
-  const jobs = apiData.data?.jobs || [];
-  const total = apiData.data?.total || 0;
+  const rawJobs = apiData.jobs || [];
+
+  const jobs = rawJobs.filter(jobInRomania).map(job => {
+    const url = job.jobUrl || `https://jobs.ashbyhq.com/taktile/${job.id}`;
+
+    return {
+      url,
+      title: job.title,
+      uid: job.id,
+      workmode: normalizeWorkmode(job.workplaceType),
+      location: ["Iași"]
+    };
+  });
 
   return {
-    jobs: jobs.map(job => {
-      const vacancyType = job.vacancy_type || "Hybrid";
-      let workmode = "hybrid";
-      if (vacancyType.toLowerCase().includes("remote")) workmode = "remote";
-      else if (vacancyType.toLowerCase().includes("office")) workmode = "on-site";
-
-      const location = [];
-      if (job.city && job.city.length > 0) {
-        for (const c of job.city) {
-          if (c.name) location.push(c.name);
-        }
-      } else if (job.country?.[0]?.name) {
-        location.push(job.country[0].name);
-      }
-
-      const uid = job.uid || "";
-      const seoUrl = job.seo?.url || `/en/vacancy/${uid}_en`;
-      const url = seoUrl.startsWith('http') ? seoUrl : `${JOB_BASE}${seoUrl}`;
-
-      const tags = (job.skills || []).map(s => s.toLowerCase());
-
-      return {
-        url,
-        title: job.name,
-        uid: job.uid,
-        workmode,
-        location,
-        tags
-      };
-    }),
-    total
+    jobs,
+    total: jobs.length
   };
 }
 
 async function scrapeAllListings(testOnlyOnePage = false) {
-  const allJobs = [];
-  const seenUrls = new Set();
-  let page = 1;
-  let totalJobs = 0;
-  const MAX_PAGES = 10;
+  console.log("Fetching Taktile Ashby job board...");
+  const data = await fetchJobs();
+  const result = parseApiJobs(data);
+  const jobs = result.jobs;
 
-  while (true) {
-    console.log(`Fetching API page: ${page}`);
-    const data = await fetchJobsPage(page);
-    const result = parseApiJobs(data);
-    const jobs = result.jobs;
+  console.log(`Total Romania/Iasi jobs on site: ${result.total}`);
 
-    if (!jobs.length) {
-      console.log(`No jobs found on page ${page}, stopping.`);
-      break;
-    }
-
-    if (page === 1) {
-      totalJobs = result.total;
-      console.log(`Total jobs on site: ${totalJobs}`);
-    }
-
-    let newJobs = 0;
-    for (const job of jobs) {
-      if (!seenUrls.has(job.url)) {
-        seenUrls.add(job.url);
-        allJobs.push(job);
-        newJobs++;
-      }
-    }
-    console.log(`Page ${page}: ${jobs.length} jobs, ${newJobs} new (total: ${allJobs.length})`);
-
-    if (testOnlyOnePage) {
-      console.log("Test mode: stopping after page 1.");
-      break;
-    }
-
-    if (page >= MAX_PAGES) {
-      console.log(`Max pages (${MAX_PAGES}) reached, stopping.`);
-      break;
-    }
-
-    if (newJobs === 0) {
-      console.log(`No new jobs on page ${page}, stopping.`);
-      break;
-    }
-
-    page += 1;
-    await sleep(1000);
+  if (testOnlyOnePage) {
+    console.log("Test mode: stopping after first fetch.");
   }
 
-  console.log(`Total unique jobs collected: ${allJobs.length}`);
-  return allJobs;
+  return jobs;
 }
 
 function mapToJobModel(rawJob, cif, companyName = COMPANY_NAME) {
@@ -279,7 +238,7 @@ async function main() {
 
     const rawJobs = await scrapeAllListings(testOnlyOnePage);
     const scrapedCount = rawJobs.length;
-    console.log(`Jobs scraped from EPAM Careers website: ${scrapedCount}`);
+    console.log(`Jobs scraped from Taktile Ashby board: ${scrapedCount}`);
 
     if (!testOnlyOnePage) {
       const anofmJobs = await searchANOFM(cif);
@@ -295,7 +254,7 @@ async function main() {
     const jobs = rawJobs.map(job => mapToJobModel(job, cif));
 
     const payload = {
-      source: "epam.com",
+      source: "jobs.ashbyhq.com/taktile",
       scrapedAt: new Date().toISOString(),
       company: COMPANY_NAME,
       cif: cif,
@@ -357,7 +316,7 @@ async function main() {
     const finalResult = await querySOLR(COMPANY_CIF);
     console.log(`\n=== SUMMARY ===`);
     console.log(`Jobs existing in SOLR before scrape: ${existingCount}`);
-    console.log(`Jobs scraped from EPAM website: ${scrapedCount}`);
+    console.log(`Jobs scraped from Taktile Ashby board: ${scrapedCount}`);
     console.log(`Stale jobs attempted: ${staleUrls.length}`);
     console.log(`Jobs in SOLR after scrape: ${finalResult.numFound}`);
     console.log(`====================`);

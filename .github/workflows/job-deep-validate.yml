@@ -30,4 +30,4 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Deep validate (browser mode — catches JS 404s)
-        run: node --no-deprecation tests/validate-epam-jobs.js --browser --timeout 30000 --delete
+        run: node --no-deprecation tests/validate-taktile-jobs.js --browser --timeout 30000 --delete
