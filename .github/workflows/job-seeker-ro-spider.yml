@@ -54,11 +54,19 @@ jobs:
             "https://api.peviitor.ro/v1/firme/company/add/" \
             -H "Content-Type: application/json" \
             --data-binary @company_data.json
+          echo ""
 
-          FINAL=$(curl -s \
-            "https://api.peviitor.ro/v1/firme/company/?cif=${CIF}" | jq '.total')
-
-          echo "${BRAND} count after upsert: $FINAL"
+          # Wait for the company index to catch up (eventual consistency on first upsert)
+          FINAL=0
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            FINAL=$(curl -s \
+              "https://api.peviitor.ro/v1/firme/company/?cif=${CIF}" | jq '.total')
+            echo "${BRAND} count after upsert (attempt ${i}): $FINAL"
+            if [ "$FINAL" -ge "1" ]; then
+              break
+            fi
+            sleep 3
+          done
 
           if [ "$FINAL" -ge "1" ]; then
             echo "✅ SUCCESS: ${BRAND} is in company core"
