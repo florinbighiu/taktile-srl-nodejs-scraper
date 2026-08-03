@@ -157,6 +157,7 @@ jobs:
 
       - name: Run Unit Tests
         run: |
+          mkdir -p docs/test-results
           npm run test:unit
           sed -i 's|<title>Test Report</title>|<title>Pre-scrape: Unit Tests — TAKTILE S.R.L.</title>|;s|<h1 id="title">Test Report</h1>|<h1 id="title">Pre-scrape: Unit Tests — TAKTILE S.R.L.</h1>|' test-report.html
           cp test-report.html docs/test-results/pre-scrape-unit.html || true
